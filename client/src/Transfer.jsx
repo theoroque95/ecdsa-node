@@ -1,5 +1,7 @@
 import { useState } from "react";
 import server from "./server";
+import { signMessage, toJson } from "./helper/utils";
+import { utf8ToBytes } from "ethereum-cryptography/utils";
 
 function Transfer({ address, setBalance }) {
   const [sendAmount, setSendAmount] = useState("");
@@ -10,17 +12,30 @@ function Transfer({ address, setBalance }) {
   async function transfer(evt) {
     evt.preventDefault();
 
+    // Sign the message using the sender's private key
+    const privateKey = prompt("Please enter your private key:");
+
+    const amount = parseInt(sendAmount);
+    const signature = await signMessage(privateKey, `${recipient}:${amount}`);
+
+    const transaction = {
+      message: {
+        amount,
+        recipient,
+      },
+      signature: toJson(signature),
+    };
+
+    console.log('transaction', transaction)
+
     try {
       const {
         data: { balance },
-      } = await server.post(`send`, {
-        sender: address,
-        amount: parseInt(sendAmount),
-        recipient,
-      });
+      } = await server.post(`send`, transaction);
       setBalance(balance);
-    } catch (ex) {
-      alert(ex.response.data.message);
+    } catch (error) {
+      console.log("error", error);
+      alert(error);
     }
   }
 
