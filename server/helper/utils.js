@@ -1,5 +1,6 @@
 const { keccak256 } = require('ethereum-cryptography/keccak');
 const { toHex, utf8ToBytes, hexToBytes } = require("ethereum-cryptography/utils");
+const { secp256k1 } = require("ethereum-cryptography/secp256k1");
 
 const pubKeyToAccount = (pubKey) => {
   const address = toHex(keccak256(pubKey.slice(1).slice(-20)));
@@ -20,7 +21,7 @@ const signatureToPubKey = (message, signature) => {
   const recoveryBit = fullSignatureBytes[0];
   const signatureBytes = fullSignatureBytes.slice(1);
 
-  return secp.recoverPublicKey(hash, signatureBytes, recoveryBit);
+  return signature.recoverPublicKey(hash);
 };
 
 module.exports = {

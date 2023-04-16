@@ -1,7 +1,8 @@
 import { useState } from "react";
 import server from "./server";
-import { signMessage, toJson } from "./helper/utils";
-import { utf8ToBytes } from "ethereum-cryptography/utils";
+import { signMessage, hashMessage } from "./helper/utils";
+import { toHex, utf8ToBytes } from "ethereum-cryptography/utils";
+import { secp256k1 } from "ethereum-cryptography/secp256k1";
 
 function Transfer({ address, setBalance }) {
   const [sendAmount, setSendAmount] = useState("");
@@ -16,26 +17,31 @@ function Transfer({ address, setBalance }) {
     const privateKey = prompt("Please enter your private key:");
 
     const amount = parseInt(sendAmount);
-    const signature = await signMessage(privateKey, `${recipient}:${amount}`);
+    const msg = hashMessage(`${recipient}:${amount}`);
+    const signature = await signMessage(privateKey, msg);
+    const isSigned = secp256k1.verify(signature, msg, address);
+    console.log("isSigned", isSigned);
 
-    const transaction = {
-      message: {
-        amount,
-        recipient,
-      },
-      signature: toJson(signature),
-    };
+    if (isSigned) {
+      const transaction = {
+        message: {
+          amount,
+          recipient,
+        },
+        sender: address
+      };
 
-    console.log('transaction', transaction)
-
-    try {
-      const {
-        data: { balance },
-      } = await server.post(`send`, transaction);
-      setBalance(balance);
-    } catch (error) {
-      console.log("error", error);
-      alert(error);
+      try {
+        const {
+          data: { balance },
+        } = await server.post(`send`, transaction);
+        setBalance(balance);
+      } catch (error) {
+        console.log("error", error);
+        alert(error);
+      }
+    } else {
+      alert('Not Signed by owner!')
     }
   }
 

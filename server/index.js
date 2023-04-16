@@ -2,8 +2,13 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const port = 3042;
-const { pubKeyToAccount, hashMessage, signatureToPubKey } = require('./helper/utils');
+const { pubKeyToAccount, hashMessage } = require("./helper/utils");
 const { secp256k1 } = require("ethereum-cryptography/secp256k1");
+const {
+  toHex,
+  utf8ToBytes,
+  hexToBytes,
+} = require("ethereum-cryptography/utils");
 
 app.use(cors());
 app.use(express.json());
@@ -21,31 +26,19 @@ app.get("/balance/:address", (req, res) => {
 });
 
 app.post("/send", (req, res) => {
-  const { message, signature: sig } = req.body;
+  const { message, sender } = req.body;
   const { recipient, amount } = message;
 
-  const signature = JSON.parse(sig)
-  const msg = `${recipient}:${amount}`
-  const pubKey = signatureToPubKey(msg, sig)
-  const sender = pubKeyToAccount(pubKey)
+  setInitialBalance(sender);
+  setInitialBalance(recipient);
 
-  const isSigned = secp256k1.verify(signature, hashMessage(msg), pubKey)
-
-  if (isSigned) {
-    setInitialBalance(sender);
-    setInitialBalance(recipient);
-    
-    if (balances[sender] < amount) {
-      res.status(400).send({ message: "Not enough funds!" });
-    } else {
-      balances[sender] -= amount;
-      balances[recipient] += amount;
-      res.send({ balance: balances[sender] });
-    }
+  if (balances[sender] < amount) {
+    res.status(400).send({ message: "Not enough funds!" });
   } else {
-    res.status(400).send({ message: "Not Signed!" });
+    balances[sender] -= amount;
+    balances[recipient] += amount;
+    res.send({ balance: balances[sender] });
   }
-  
 });
 
 app.listen(port, () => {

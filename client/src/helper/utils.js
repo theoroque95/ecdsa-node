@@ -10,8 +10,7 @@ export function hashMessage(message) {
 }
 
 export async function signMessage(privateKey, message) {
-  const hash = await hashMessage(message);
-  const signature = await secp256k1.sign(hash , privateKey);
+  const signature = await secp256k1.sign(message, privateKey);
 
   return signature;
 }
